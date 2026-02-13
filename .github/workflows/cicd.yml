@@ -1,4 +1,4 @@
-name: Build & Deploy App via GHCR
+name: Build → Test → Docker → Deploy → Smoke Test
 
 on:
   push:
@@ -7,8 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-
-  build-and-push:
+  ci-cd:
     runs-on: ubuntu-latest
 
     permissions:
@@ -16,32 +15,42 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      # ------------------------------
-      # Backend Build
-      # ------------------------------
+      # ==========================================================
+      # BACKEND BUILD & TEST
+      # ==========================================================
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Build Backend
-        run: mvn -B -DskipTests=true clean package
+      - name: Build Backend & Run Tests
         working-directory: backend
+        run: mvn -B clean verify
 
-      # ------------------------------
-      # Frontend Build
-      # ------------------------------
+      # ==========================================================
+      # FRONTEND BUILD & TEST
+      # ==========================================================
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20
 
-      # ------------------------------
-      # Login to GHCR
-      # ------------------------------
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Run Frontend Tests
+        working-directory: frontend
+        run: npm test -- --watch=false --passWithNoTests
+        continue-on-error: true
+
+      # ==========================================================
+      # DOCKER BUILD & PUSH (GHCR)
+      # ==========================================================
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -49,84 +58,80 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_PAT }}
 
-      # ------------------------------
-      # Lowercase Repo Owner for GHCR
-      # ------------------------------
       - name: Set lowercase repo owner
         run: echo "REPO_OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
 
-      # ------------------------------
-      # Docker Builds
-      # ------------------------------
-      - name: Build Backend Image
-        run: |
-          docker build -t ghcr.io/${REPO_OWNER_LC}/employee-backend:${{ github.run_number }} backend
+      - name: Build Backend Docker Image
+        run: docker build -t ghcr.io/${REPO_OWNER_LC}/employee-backend:${{ github.run_number }} backend
 
-      - name: Build Frontend Image
-        run: |
-          docker build -t ghcr.io/${REPO_OWNER_LC}/employee-frontend:${{ github.run_number }} frontend
-          
-      # ------------------------------
-      # Push to GHCR
-      # ------------------------------
-      - name: Push Images to GHCR
+      - name: Build Frontend Docker Image
+        run: docker build -t ghcr.io/${REPO_OWNER_LC}/employee-frontend:${{ github.run_number }} frontend
+
+      - name: Push Docker Images
         run: |
           docker push ghcr.io/${REPO_OWNER_LC}/employee-backend:${{ github.run_number }}
           docker push ghcr.io/${REPO_OWNER_LC}/employee-frontend:${{ github.run_number }}
 
-
-
-#CD starts here
-      # ---------------------------
-      # Trigger deployment on EC2 using SSM
-      # ---------------------------
+      # ==========================================================
+      # AWS DEPLOYMENT
+      # ==========================================================
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Get App EC2 instance id
-        id: get_instance
+      - name: Get EC2 Instance
+        id: ec2
         run: |
           INSTANCE_ID=$(aws ec2 describe-instances \
             --filters "Name=tag:Name,Values=app-server" "Name=instance-state-name,Values=running" \
             --query "Reservations[*].Instances[*].InstanceId" \
             --output text | head -n1)
 
-          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
-          echo "Found instance: $INSTANCE_ID"
-
-      - name: Get RDS Endpoint
-        id: get_rds
-        run: |
-          DB_HOST=$(aws rds describe-db-instances \
-            --db-instance-identifier employees-db \
-            --query "DBInstances[0].Endpoint.Address" \
+          PUBLIC_IP=$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
             --output text)
 
-          echo "db_host=$DB_HOST" >> $GITHUB_OUTPUT
-          echo "Resolved DB endpoint: $DB_HOST"
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
 
-      - name: Trigger SSM Deploy Script
-        if: ${{ steps.get_instance.outputs.instance_id != '' }}
-
-        # "ghcr.io/${REPO_OWNER_LC}/employee-backend:${{ github.run_number }}"
+      - name: Deploy via SSM
+        if: ${{ steps.ec2.outputs.instance_id != '' }}
         run: |
-          BACKEND_IMAGE="ghcr.io/${REPO_OWNER_LC}/employee-backend:${{ github.run_number }}"
-          FRONTEND_IMAGE="ghcr.io/${REPO_OWNER_LC}/employee-frontend:${{ github.run_number }}"
-          
           aws ssm send-command \
-            --instance-ids "${{ steps.get_instance.outputs.instance_id }}" \
+            --instance-ids "${{ steps.ec2.outputs.instance_id }}" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy CI build" \
             --parameters "commands=[
               \"GHCR_USER=${{ github.repository_owner }} \
-                GHCR_TOKEN=${{ secrets.GHCR_PAT }} \
-                DB_HOST=${{ steps.get_rds.outputs.db_host }} \
-                DB_USER=attendance_user \
-                DB_PASS=${{ secrets.DB_MASTER_PASSWORD }} \
-                BACKEND_IMAGE=$BACKEND_IMAGE \
-                FRONTEND_IMAGE=$FRONTEND_IMAGE \
-                /opt/app/deploy.sh\"
+               GHCR_TOKEN=${{ secrets.GHCR_PAT }} \
+               DB_HOST=${{ secrets.DB_HOST }} \
+               DB_USER=attendance_user \
+               DB_PASS=${{ secrets.DB_MASTER_PASSWORD }} \
+               BACKEND_IMAGE=ghcr.io/${REPO_OWNER_LC}/employee-backend:${{ github.run_number }} \
+               FRONTEND_IMAGE=ghcr.io/${REPO_OWNER_LC}/employee-frontend:${{ github.run_number }} \
+               /opt/app/deploy.sh\" 
             ]"
+
+      # ==========================================================
+      # SMART SMOKE TESTS
+      # ==========================================================
+      - name: Wait for Backend Health
+        run: |
+          for i in {1..20}; do
+            if curl -s http://${{ steps.ec2.outputs.public_ip }}:8080/actuator/health | grep '"status":"UP"'; then
+              echo "Backend is UP"
+              exit 0
+            fi
+            echo "Waiting for backend..."
+            sleep 10
+          done
+          echo "Backend failed to start"
+          exit 1
+
+      - name: Frontend Smoke Test
+        run: |
+          curl -f http://${{ steps.ec2.outputs.public_ip }}
+
