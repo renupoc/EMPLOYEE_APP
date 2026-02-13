@@ -19,3 +19,4 @@ frontend/.angular/
 Thumbs.db
 frontend/dist/
 
+frontend/coverage/

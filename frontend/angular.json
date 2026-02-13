@@ -8,6 +8,7 @@
       "sourceRoot": "src",
       "prefix": "app",
       "architect": {
+
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
@@ -37,6 +38,7 @@
           },
           "defaultConfiguration": "development"
         },
+
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
@@ -51,7 +53,16 @@
             }
           },
           "defaultConfiguration": "development"
+        },
+
+        "test": {
+          "builder": "@angular-builders/jest:run",
+          "options": {
+            "configPath": "jest.config.ts",
+            "tsConfig": "tsconfig.spec.json"
+          }
         }
+
       }
     }
   },
@@ -59,3 +70,4 @@
     "analytics": false
   }
 }
+

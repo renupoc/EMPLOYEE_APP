@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -19,6 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(EmployeeController.class)
+@Import(com.example.attendance.exception.GlobalExceptionHandler.class)
 class EmployeeControllerTest {
 
     @Autowired
@@ -31,7 +33,7 @@ class EmployeeControllerTest {
     private ObjectMapper objectMapper;
 
     // ===============================
-    // GET employee by ID
+    // GET employee - SUCCESS
     // ===============================
     @Test
     void getEmployeeProfile_shouldReturnEmployee() throws Exception {
@@ -39,7 +41,7 @@ class EmployeeControllerTest {
         Employee employee = new Employee();
         employee.setId(1L);
         employee.setFirstName("Renu");
-        employee.setDepartment("IDIS");
+        employee.setDepartment("IT");
 
         when(employeeRepository.findById(1L))
                 .thenReturn(Optional.of(employee));
@@ -50,8 +52,11 @@ class EmployeeControllerTest {
         verify(employeeRepository).findById(1L);
     }
 
+    // ===============================
+    // GET employee - NOT FOUND
+    // ===============================
     @Test
-    void getEmployeeProfile_shouldThrowException_whenEmployeeNotFound() throws Exception {
+    void getEmployeeProfile_shouldReturn500_whenEmployeeNotFound() throws Exception {
 
         when(employeeRepository.findById(1L))
                 .thenReturn(Optional.empty());
@@ -63,20 +68,21 @@ class EmployeeControllerTest {
     }
 
     // ===============================
-    // UPDATE department
+    // UPDATE department - SUCCESS
     // ===============================
     @Test
-    void updateDepartment_shouldUpdateAndReturnEmployee() throws Exception {
+    void updateDepartment_shouldReturnUpdatedEmployee() throws Exception {
 
         Employee existing = new Employee();
         existing.setId(1L);
-        existing.setDepartment("IDIS");
+        existing.setDepartment("IT");
 
         Employee request = new Employee();
-        request.setDepartment("VEDC");
+        request.setDepartment("HR");
 
         when(employeeRepository.findById(1L))
                 .thenReturn(Optional.of(existing));
+
         when(employeeRepository.save(any(Employee.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -85,45 +91,33 @@ class EmployeeControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
         )
-        .andExpect(status().isOk());
+                .andExpect(status().isOk());
 
         verify(employeeRepository).findById(1L);
         verify(employeeRepository).save(existing);
     }
 
+    // ===============================
+    // UPDATE department - NOT FOUND
+    // ===============================
     @Test
-    void updateDepartment_shouldThrowException_whenEmployeeNotFound() throws Exception {
+    void updateDepartment_shouldReturn500_whenEmployeeNotFound() throws Exception {
 
         Employee request = new Employee();
-        request.setDepartment("VEDC");
+        request.setDepartment("HR");
 
-        when(employeeRepository.findById(1L))
+        when(employeeRepository.findById(99L))
                 .thenReturn(Optional.empty());
 
         mockMvc.perform(
-                put("/api/employees/{id}/department", 1L)
+                put("/api/employees/{id}/department", 99L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
         )
-        .andExpect(status().isInternalServerError());
+                .andExpect(status().isInternalServerError());
 
-        verify(employeeRepository).findById(1L);
+        verify(employeeRepository).findById(99L);
         verify(employeeRepository, never()).save(any());
     }
-@Test
-void updateDepartment_shouldReturn500_whenEmployeeNotFound() throws Exception {
-    Employee request = new Employee();
-    request.setDepartment("IDIS");
-
-    when(employeeRepository.findById(99L))
-            .thenReturn(Optional.empty());
-
-    mockMvc.perform(put("/api/employees/99/department")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isInternalServerError());
-
-    verify(employeeRepository).findById(99L);
-    verify(employeeRepository, never()).save(any());
 }
-}
+
