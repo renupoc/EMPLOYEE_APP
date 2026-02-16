@@ -6,7 +6,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
 
-  const API = 'http://localhost:8080/api/auth';
+  const API = '/api/auth';
 
   beforeEach(() => {
     TestBed.configureTestingModule({

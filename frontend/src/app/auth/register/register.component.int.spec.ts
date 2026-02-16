@@ -91,7 +91,7 @@ describe('RegisterComponent – Integration Test', () => {
     registerButton.click();
 
     const req = httpMock.expectOne(
-      'http://localhost:8080/api/auth/register'
+      '/api/auth/register'
     );
 
     expect(req.request.method).toBe('POST');
@@ -128,7 +128,7 @@ describe('RegisterComponent – Integration Test', () => {
     registerButton.click();
 
     const req = httpMock.expectOne(
-      'http://localhost:8080/api/auth/register'
+      '/api/auth/register'
     );
 
     req.flush(

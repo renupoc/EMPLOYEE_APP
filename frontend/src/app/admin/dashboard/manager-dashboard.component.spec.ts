@@ -9,13 +9,13 @@ describe('ManagerDashboardComponent (Unit)', () => {
   let httpMock: HttpTestingController;
 
   const BASE_URL =
-    'http://localhost:8080/api/attendance/admin/employees-attendance';
+    '/api/attendance/admin/employees-attendance';
 
   const WEEK_URL =
-    'http://localhost:8080/api/attendance/admin/weekly';
+    '/api/attendance/admin/weekly';
 
   const WEEK_UPDATE_URL =
-    'http://localhost:8080/api/attendance/admin/weekly/update';
+    '/api/attendance/admin/weekly/update';
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -172,7 +172,7 @@ describe('ManagerDashboardComponent (Unit)', () => {
     component.saveEmployee();
 
     const req = httpMock.expectOne(
-      'http://localhost:8080/api/attendance/admin/update/1'
+      '/api/attendance/admin/update/1'
     );
 
     expect(req.request.method).toBe('PUT');
@@ -220,7 +220,7 @@ describe('ManagerDashboardComponent (Unit)', () => {
     component.deleteEmployee({ attendanceId: 1 } as any);
 
     const req = httpMock.expectOne(
-      'http://localhost:8080/api/attendance/admin/1'
+      '/api/attendance/admin/1'
     );
 
     expect(req.request.method).toBe('DELETE');

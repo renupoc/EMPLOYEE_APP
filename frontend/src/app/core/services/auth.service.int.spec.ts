@@ -9,7 +9,7 @@ describe('AuthService – Integration Tests', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
 
-  const AUTH_API = 'http://localhost:8080/api/auth';
+  const AUTH_API = '/api/auth';
 
   beforeEach(() => {
     TestBed.configureTestingModule({

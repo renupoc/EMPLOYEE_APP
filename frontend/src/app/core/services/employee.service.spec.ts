@@ -6,8 +6,8 @@ describe('EmployeeService', () => {
   let service: EmployeeService;
   let httpMock: HttpTestingController;
 
-  const EMPLOYEE_API = 'http://localhost:8080/api/employees';
-  const ATTENDANCE_API = 'http://localhost:8080/api/attendance';
+  const EMPLOYEE_API = '/api/employees';
+  const ATTENDANCE_API = '/api/attendance';
 
   beforeEach(() => {
     TestBed.configureTestingModule({

@@ -6,7 +6,7 @@ describe('AttendanceService', () => {
   let service: AttendanceService;
   let httpMock: HttpTestingController;
 
-  const BASE_URL = 'http://localhost:8080/api/attendance';
+  const BASE_URL = '/api/attendance';
 
   beforeEach(() => {
     TestBed.configureTestingModule({

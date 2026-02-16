@@ -1,2 +1,4 @@
-// DO NOT import setup-jest manually
-// jest-preset-angular already handles initialization
+import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
+
+setupZoneTestEnv();
+

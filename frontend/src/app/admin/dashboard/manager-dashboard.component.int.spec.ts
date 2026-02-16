@@ -8,16 +8,16 @@ describe('ManagerDashboardComponent (Integration)', () => {
   let httpMock: HttpTestingController;
 
   const BASE_URL =
-    'http://localhost:8080/api/attendance/admin/employees-attendance';
+    '/api/attendance/admin/employees-attendance';
 
   const WEEK_URL =
-    'http://localhost:8080/api/attendance/admin/weekly';
+    '/api/attendance/admin/weekly';
 
   const WEEK_UPDATE_URL =
-    'http://localhost:8080/api/attendance/admin/weekly/update';
+    '/api/attendance/admin/weekly/update';
 
   const DELETE_URL =
-    'http://localhost:8080/api/attendance/admin/1';
+    '/api/attendance/admin/1';
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
