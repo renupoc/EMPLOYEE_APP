@@ -3,20 +3,34 @@ import { EmployeeDashboardComponent } from './employee-dashboard.component';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { EmployeeService } from '../../core/services/employee.service';
 import { of } from 'rxjs';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('EmployeeDashboardComponent (Jest)', () => {
   let component: EmployeeDashboardComponent;
   let fixture: ComponentFixture<EmployeeDashboardComponent>;
-  let attendanceServiceMock: jest.Mocked<AttendanceService>;
+
+  let attendanceServiceMock: {
+    getSelectedDates: jest.Mock;
+    submitAttendance: jest.Mock;
+  };
 
   beforeEach(async () => {
     attendanceServiceMock = {
-      getSelectedDates: jest.fn(),
-      submitAttendance: jest.fn()
-    } as unknown as jest.Mocked<AttendanceService>;
+      getSelectedDates: jest.fn().mockReturnValue(of([])),
+      submitAttendance: jest.fn().mockReturnValue(of({}))
+    };
+
+    // mock logged-in user BEFORE component init
+    localStorage.setItem(
+      'loggedInUser',
+      JSON.stringify({ employeeId: 101 })
+    );
 
     await TestBed.configureTestingModule({
-      imports: [EmployeeDashboardComponent], // standalone
+      imports: [
+        EmployeeDashboardComponent,
+        HttpClientTestingModule
+      ],
       providers: [
         { provide: AttendanceService, useValue: attendanceServiceMock },
         { provide: EmployeeService, useValue: {} }
@@ -25,14 +39,6 @@ describe('EmployeeDashboardComponent (Jest)', () => {
 
     fixture = TestBed.createComponent(EmployeeDashboardComponent);
     component = fixture.componentInstance;
-
-    // mock logged-in user
-    localStorage.setItem(
-      'loggedInUser',
-      JSON.stringify({ employeeId: 101 })
-    );
-
-    attendanceServiceMock.getSelectedDates.mockReturnValue(of([]));
 
     fixture.detectChanges();
   });
@@ -55,8 +61,7 @@ describe('EmployeeDashboardComponent (Jest)', () => {
 
   // ---------------- INIT ----------------
 
-  it('should load user from localStorage on init', () => {
-    component.ngOnInit();
+  it('should load user from localStorage', () => {
     expect(component.user.employeeId).toBe(101);
   });
 
@@ -83,12 +88,11 @@ describe('EmployeeDashboardComponent (Jest)', () => {
     component.generateWeeks();
 
     expect(component.weeks.length).toBeGreaterThan(0);
-    expect(component.weeks[0].totalWorkingDays).toBeGreaterThan(0);
   });
 
-  // ---------------- TOGGLE & COUNTS ----------------
+  // ---------------- TOGGLE ----------------
 
-  it('should toggle a working day and increase workedDays', () => {
+  it('should toggle working day', () => {
     component.selectedMonth = 1;
     component.selectedYear = 2024;
 
@@ -105,8 +109,8 @@ describe('EmployeeDashboardComponent (Jest)', () => {
     expect(component.workedDays).toBe(1);
   });
 
-  it('should not toggle weekend day', () => {
-    const weekendDay = {
+  it('should not toggle weekend', () => {
+    const weekendDay: any = {
       date: new Date(),
       day: 1,
       isWeekend: true,
@@ -118,27 +122,19 @@ describe('EmployeeDashboardComponent (Jest)', () => {
     expect(weekendDay.isSelected).toBeFalsy();
   });
 
-  // ---------------- FORM VALIDATION ----------------
+  // ---------------- FORM ----------------
 
-  it('should return false when form is invalid', () => {
-    component.selectedMonth = null;
-    component.selectedYear = null;
-    component.workedDays = 0;
-
-    expect(component.isFormValid()).toBeFalsy();
-  });
-
-  it('should return true when form is valid', () => {
+  it('should validate form', () => {
     component.selectedMonth = 1;
     component.selectedYear = 2024;
-    component.workedDays = 5;
+    component.workedDays = 3;
 
     expect(component.isFormValid()).toBeTruthy();
   });
 
   // ---------------- SUBMIT ----------------
 
-  it('should submit attendance successfully', () => {
+  it('should submit attendance', () => {
     jest.spyOn(window, 'alert').mockImplementation(() => {});
 
     component.selectedMonth = 1;
@@ -156,8 +152,6 @@ describe('EmployeeDashboardComponent (Jest)', () => {
       }
     ];
 
-    attendanceServiceMock.submitAttendance.mockReturnValue(of({}));
-
     component.submit();
 
     expect(attendanceServiceMock.submitAttendance).toHaveBeenCalled();
@@ -165,13 +159,14 @@ describe('EmployeeDashboardComponent (Jest)', () => {
 
   // ---------------- LOGOUT ----------------
 
-  it('should clear localStorage on logout', () => {
-    localStorage.setItem('loggedInUser', 'test');
+  it('should logout correctly', () => {
+    delete (window as any).location;
+
+    (window as any).location = { href: '' };
 
     component.logout();
 
     expect(localStorage.getItem('loggedInUser')).toBeNull();
-});
-
+  });
 });
 

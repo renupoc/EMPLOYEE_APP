@@ -13,9 +13,9 @@ describe('LoginComponent – Integration Test', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
-        LoginComponent,                   // ✅ standalone component
-        HttpClientTestingModule,          // ✅ real HttpClient (mocked backend)
-        RouterTestingModule.withRoutes([]) // ✅ router integration
+        LoginComponent,
+        HttpClientTestingModule,
+        RouterTestingModule.withRoutes([])
       ]
     }).compileComponents();
 
@@ -24,38 +24,29 @@ describe('LoginComponent – Integration Test', () => {
     httpMock = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);
 
-    // ✅ mock browser APIs
     jest.spyOn(window, 'alert').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    fixture.detectChanges(); // renders template
+    fixture.detectChanges();
   });
 
   afterEach(() => {
     httpMock.verify();
     jest.clearAllMocks();
+    localStorage.clear();
   });
 
   // ---------------------------------------------------
-  // SUCCESS FLOW – EMPLOYEE
+  // SUCCESS – EMPLOYEE
   // ---------------------------------------------------
   it('should login employee and navigate to employee dashboard', () => {
-    const el: HTMLElement = fixture.nativeElement;
-
-    // 🔹 simulate user typing
     component.email = 'emp@test.com';
     component.password = '123456';
 
-    fixture.detectChanges();
+    component.login();
 
-    // 🔹 click login button
-    fixture.nativeElement.querySelector('button[type="submit"]')?.click();
-
-    // 🔹 backend interception
-    const req = httpMock.expectOne(
-      'http://localhost:8080/api/auth/login'
-    );
+    const req = httpMock.expectOne('/api/auth/login');
 
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
@@ -68,27 +59,20 @@ describe('LoginComponent – Integration Test', () => {
       email: 'emp@test.com'
     });
 
-    fixture.detectChanges();
-
-    // 🔹 assertions
     expect(localStorage.getItem('loggedInUser')).toContain('EMPLOYEE');
     expect(router.navigate).toHaveBeenCalledWith(['/employee-dashboard']);
   });
 
   // ---------------------------------------------------
-  // SUCCESS FLOW – ADMIN
+  // SUCCESS – ADMIN
   // ---------------------------------------------------
   it('should login admin and navigate to admin dashboard', () => {
     component.email = 'admin@test.com';
     component.password = 'admin123';
 
-    fixture.nativeElement
-      .querySelector('button[type="submit"]')
-      ?.click();
+    component.login();
 
-    const req = httpMock.expectOne(
-      'http://localhost:8080/api/auth/login'
-    );
+    const req = httpMock.expectOne('/api/auth/login');
 
     req.flush({
       role: 'ADMIN',
@@ -102,11 +86,12 @@ describe('LoginComponent – Integration Test', () => {
   // UNKNOWN ROLE
   // ---------------------------------------------------
   it('should show alert for unknown role', () => {
+    component.email = 'user@test.com';
+    component.password = '123';
+
     component.login();
 
-    const req = httpMock.expectOne(
-      'http://localhost:8080/api/auth/login'
-    );
+    const req = httpMock.expectOne('/api/auth/login');
 
     req.flush({
       role: 'MANAGER'
@@ -116,14 +101,15 @@ describe('LoginComponent – Integration Test', () => {
   });
 
   // ---------------------------------------------------
-  // LOGIN FAILURE
+  // FAILURE
   // ---------------------------------------------------
   it('should show error alert on login failure', () => {
+    component.email = 'user@test.com';
+    component.password = 'wrong';
+
     component.login();
 
-    const req = httpMock.expectOne(
-      'http://localhost:8080/api/auth/login'
-    );
+    const req = httpMock.expectOne('/api/auth/login');
 
     req.flush(
       { message: 'Invalid credentials' },

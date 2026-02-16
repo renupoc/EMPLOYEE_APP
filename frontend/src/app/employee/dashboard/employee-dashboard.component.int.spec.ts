@@ -64,7 +64,7 @@ describe('EmployeeDashboardComponent – Integration Test', () => {
 
     const req = httpMock.expectOne(req =>
       req.url ===
-      'http://localhost:8080/api/attendance/employee/1/days'
+      '/api/attendance/employee/1/days'
     );
 
     expect(req.request.method).toBe('GET');
@@ -116,7 +116,7 @@ describe('EmployeeDashboardComponent – Integration Test', () => {
     component.submit();
 
     const req = httpMock.expectOne(
-      'http://localhost:8080/api/attendance/submit/1'
+      '/api/attendance/submit/1'
     );
 
     expect(req.request.method).toBe('POST');
@@ -148,7 +148,7 @@ describe('EmployeeDashboardComponent – Integration Test', () => {
     component.submit();
 
     const req = httpMock.expectOne(
-      'http://localhost:8080/api/attendance/submit/1'
+      '/api/attendance/submit/1'
     );
 
     req.flush({}, { status: 500, statusText: 'Server Error' });

@@ -14,8 +14,8 @@ describe('RegisterComponent (Jest)', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
-        RegisterComponent,                 // ✅ standalone component
-        RouterTestingModule.withRoutes([]) // ✅ fixes ActivatedRoute
+        RegisterComponent,
+        RouterTestingModule.withRoutes([])
       ],
       providers: [
         {
@@ -33,9 +33,11 @@ describe('RegisterComponent (Jest)', () => {
     authService = TestBed.inject(AuthService) as jest.Mocked<AuthService>;
     router = TestBed.inject(Router);
 
-    // ✅ Mock browser APIs
+    // ✅ Mock browser + console APIs (important for CI stability)
     jest.spyOn(window, 'alert').mockImplementation(() => {});
     jest.spyOn(router, 'navigate').mockResolvedValue(true);
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     fixture.detectChanges();
   });
@@ -75,9 +77,9 @@ describe('RegisterComponent (Jest)', () => {
   });
 
   // ---------------------------------------------------
-  // SUCCESS
+  // SUCCESS FLOW
   // ---------------------------------------------------
-  it('should register user successfully and navigate to login', () => {
+  it('should register successfully and navigate to login', () => {
     authService.register.mockReturnValue(of({}));
 
     component.firstName = 'John';
@@ -102,7 +104,7 @@ describe('RegisterComponent (Jest)', () => {
   });
 
   // ---------------------------------------------------
-  // FAILURE
+  // FAILURE FLOW
   // ---------------------------------------------------
   it('should show error alert on registration failure', () => {
     authService.register.mockReturnValue(
@@ -112,6 +114,7 @@ describe('RegisterComponent (Jest)', () => {
     component.firstName = 'John';
     component.lastName = 'Doe';
     component.email = 'john@test.com';
+    component.department = 'IDIS';
     component.password = '123456';
     component.confirmPassword = '123456';
 

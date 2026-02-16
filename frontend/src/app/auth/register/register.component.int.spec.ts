@@ -13,9 +13,9 @@ describe('RegisterComponent – Integration Test', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
-        RegisterComponent,                    // ✅ standalone
-        HttpClientTestingModule,              // ✅ real HttpClient (mocked backend)
-        RouterTestingModule.withRoutes([])    // ✅ router integration
+        RegisterComponent,
+        HttpClientTestingModule,
+        RouterTestingModule.withRoutes([])
       ]
     }).compileComponents();
 
@@ -24,12 +24,11 @@ describe('RegisterComponent – Integration Test', () => {
     httpMock = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);
 
-    // ✅ mock browser APIs
     jest.spyOn(window, 'alert').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    fixture.detectChanges(); // render template
+    fixture.detectChanges();
   });
 
   afterEach(() => {
@@ -38,20 +37,15 @@ describe('RegisterComponent – Integration Test', () => {
   });
 
   // ---------------------------------------------------
-  // VALIDATION – REQUIRED FIELDS
+  // REQUIRED FIELDS
   // ---------------------------------------------------
   it('should show alert if required fields are missing', () => {
-    const registerButton = fixture.nativeElement.querySelector(
-      'button[type="submit"]'
-    ) as HTMLButtonElement;
-
-    registerButton.click();
-
+    component.register();
     expect(window.alert).toHaveBeenCalledWith('All fields are required');
   });
 
   // ---------------------------------------------------
-  // VALIDATION – PASSWORD MISMATCH
+  // PASSWORD MISMATCH
   // ---------------------------------------------------
   it('should show alert if passwords do not match', () => {
     component.firstName = 'John';
@@ -60,19 +54,13 @@ describe('RegisterComponent – Integration Test', () => {
     component.password = '123456';
     component.confirmPassword = '654321';
 
-    fixture.detectChanges();
-
-    const registerButton = fixture.nativeElement.querySelector(
-      'button[type="submit"]'
-    ) as HTMLButtonElement;
-
-    registerButton.click();
+    component.register();
 
     expect(window.alert).toHaveBeenCalledWith('Passwords do not match');
   });
 
   // ---------------------------------------------------
-  // SUCCESS FLOW
+  // SUCCESS
   // ---------------------------------------------------
   it('should register user successfully and navigate to login', () => {
     component.firstName = 'John';
@@ -82,17 +70,9 @@ describe('RegisterComponent – Integration Test', () => {
     component.password = '123456';
     component.confirmPassword = '123456';
 
-    fixture.detectChanges();
+    component.register();
 
-    const registerButton = fixture.nativeElement.querySelector(
-      'button[type="submit"]'
-    ) as HTMLButtonElement;
-
-    registerButton.click();
-
-    const req = httpMock.expectOne(
-      '/api/auth/register'
-    );
+    const req = httpMock.expectOne('/api/auth/register');
 
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
@@ -110,7 +90,7 @@ describe('RegisterComponent – Integration Test', () => {
   });
 
   // ---------------------------------------------------
-  // FAILURE FLOW
+  // FAILURE
   // ---------------------------------------------------
   it('should show error alert if registration fails', () => {
     component.firstName = 'John';
@@ -119,17 +99,9 @@ describe('RegisterComponent – Integration Test', () => {
     component.password = '123456';
     component.confirmPassword = '123456';
 
-    fixture.detectChanges();
+    component.register();
 
-    const registerButton = fixture.nativeElement.querySelector(
-      'button[type="submit"]'
-    ) as HTMLButtonElement;
-
-    registerButton.click();
-
-    const req = httpMock.expectOne(
-      '/api/auth/register'
-    );
+    const req = httpMock.expectOne('/api/auth/register');
 
     req.flush(
       { message: 'Registration failed' },

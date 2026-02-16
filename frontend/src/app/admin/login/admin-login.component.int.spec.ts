@@ -13,9 +13,9 @@ describe('AdminLoginComponent – Integration Test', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
-        AdminLoginComponent,               // ✅ standalone component
-        HttpClientTestingModule,           // ✅ real HttpClient (mocked backend)
-        RouterTestingModule.withRoutes([]) // ✅ router integration
+        AdminLoginComponent,
+        HttpClientTestingModule,
+        RouterTestingModule.withRoutes([])
       ]
     }).compileComponents();
 
@@ -24,12 +24,10 @@ describe('AdminLoginComponent – Integration Test', () => {
     httpMock = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);
 
-    // ✅ mock browser APIs
     jest.spyOn(window, 'alert').mockImplementation(() => {});
     jest.spyOn(router, 'navigate').mockResolvedValue(true);
-    jest.spyOn(Storage.prototype, 'setItem');
 
-    fixture.detectChanges(); // render template
+    fixture.detectChanges();
   });
 
   afterEach(() => {
@@ -44,17 +42,10 @@ describe('AdminLoginComponent – Integration Test', () => {
   it('should login admin and navigate to admin dashboard', () => {
     component.email = 'admin@test.com';
     component.password = 'admin123';
-    fixture.detectChanges();
 
-    const loginButton = fixture.nativeElement.querySelector(
-      'button[type="submit"]'
-    ) as HTMLButtonElement;
+    component.login();
 
-    loginButton.click();
-
-    const req = httpMock.expectOne(
-      'http://localhost:8080/api/auth/login'
-    );
+    const req = httpMock.expectOne('/api/auth/login');
 
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
@@ -74,23 +65,22 @@ describe('AdminLoginComponent – Integration Test', () => {
   });
 
   // ---------------------------------------------------
-  // FAILURE – NON-ADMIN ROLE
+  // FAILURE – NON ADMIN
   // ---------------------------------------------------
   it('should block login if role is not ADMIN', () => {
+    component.email = 'emp@test.com';
+    component.password = '123';
+
     component.login();
 
-    const req = httpMock.expectOne(
-      'http://localhost:8080/api/auth/login'
-    );
+    const req = httpMock.expectOne('/api/auth/login');
 
     req.flush({
       role: 'EMPLOYEE',
       employeeId: 201
     });
 
-    expect(window.alert).toHaveBeenCalledWith(
-      'Access denied. Admin only.'
-    );
+    expect(window.alert).toHaveBeenCalledWith('Access denied. Admin only.');
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
@@ -98,20 +88,19 @@ describe('AdminLoginComponent – Integration Test', () => {
   // FAILURE – INVALID CREDENTIALS
   // ---------------------------------------------------
   it('should show error alert on login failure', () => {
+    component.email = 'admin@test.com';
+    component.password = 'wrong';
+
     component.login();
 
-    const req = httpMock.expectOne(
-      'http://localhost:8080/api/auth/login'
-    );
+    const req = httpMock.expectOne('/api/auth/login');
 
     req.flush(
       { message: 'Invalid credentials' },
       { status: 401, statusText: 'Unauthorized' }
     );
 
-    expect(window.alert).toHaveBeenCalledWith(
-      'Invalid email or password'
-    );
+    expect(window.alert).toHaveBeenCalledWith('Invalid email or password');
   });
 });
 
